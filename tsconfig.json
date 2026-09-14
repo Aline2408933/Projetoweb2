@@ -1,0 +1,28 @@
+{
+ 
+  "compilerOptions": {
+   
+    "module": "nodenext",
+    "outDir": "./dist", // Diretório de saída para os arquivos já para a visualização do Node.js
+    "rootDir": "./src",
+    "target": "esnext",
+    "types": [],
+  
+    "sourceMap": true,
+    "declaration": true,
+    "declarationMap": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+
+    "strict": true,
+    "jsx": "react-jsx",
+    "isolatedModules": true,
+    "noUncheckedSideEffectImports": true,
+    "moduleDetection": "force",
+    "skipLibCheck": true,
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    "resolveJsonModule": true,
+    "moduleResolution" : "nodenext"
+  }
+}

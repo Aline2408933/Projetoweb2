@@ -1,0 +1,30 @@
+{
+  "name": "projeto-web2",
+  "version": "1.0.0",
+  "description": "",
+  "license": "ISC",
+  "author": "",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "watch": "tsc --watch",
+    "start:watch": "concurrently \"npm run watch\" \"node --watch dist/index.js\"",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "@types/express": "^5.0.6",
+    "@types/node": "^22.20.2",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "mysql2": "^3.24.4",
+    "reflect-metadata": "^0.2.2",
+    "typeorm": "^1.1.1"
+  },
+  "devDependencies": {
+    "@types/dotenv": "^6.1.1",
+    "concurrently": "^10.0.5",
+    "ts-node": "^10.9.2"
+  }
+}
