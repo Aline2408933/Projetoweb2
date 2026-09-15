@@ -86,5 +86,40 @@ router.put("/situations/:id", async(req: Request, res:Response) => {
    
 
 });
+router.delete("/situations/:id", async(req: Request, res: Response) => {
+    try {
+        const { id } = req.params;
+
+        console.log("DELETE recebido. ID =", id);
+
+        const situationRepository = AppDataSource.getRepository(Situations);
+
+        const situation = await situationRepository.findOneBy({
+            id: Number(id)
+        });
+
+        console.log("Situação encontrada:", situation);
+
+        if (!situation) {
+            res.status(404).json({
+                message: "Situação não encontrada"
+            });
+            return;
+        }
+
+        await situationRepository.delete(Number(id));
+
+        res.status(200).json({
+            message: "Situação removida com sucesso"
+        });
+
+    } catch (error) {
+        console.error("ERRO COMPLETO:", error);
+
+        res.status(500).json({
+            message: "Erro ao remover situação"
+        });
+    }
+});
 
 export default router;
