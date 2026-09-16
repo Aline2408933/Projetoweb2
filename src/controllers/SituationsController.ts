@@ -7,10 +7,40 @@ import { Situations } from '../entity/Situations.js';
 const router = express.Router();
 
 router.get("/situations", async(req: Request, res:Response) => {
-    try{ const SituationRepository = AppDataSource.getRepository(Situations); 
-        const situations = await SituationRepository.find();
-        res.status(200).json(situations);
+    try{
+        const SituationRepository = AppDataSource.getRepository(Situations); 
+        const page = Number(req.query.page) || 1;
+        const limit = 1;
+        const totalSituations = await SituationRepository.count();
+        if (totalSituations === 0) {
+            res.status(400).json({
+                 message: "Nenhuma situação encontrada" });
         return;
+    }
+    const lastPage = Math.ceil(totalSituations / limit);
+    if (page > lastPage) {
+        res.status(400).json({   
+            message: "Página inválida'.O total de páginas é " + lastPage });
+        return;}
+
+        const offset = (page - 1) * limit;
+
+        const situations = await SituationRepository.find({
+            skip: offset,
+            take: limit,    
+            order: {
+                id: "DESC"
+            }
+        });
+
+        res.status(200).json({
+            currentPage: page,
+            lastPage, 
+            totalSituations,
+            situations,
+        });
+      return;
+      
     }catch (error) {
         res.status(500).json({ message: "Erro ao listar situações" });
         return;
