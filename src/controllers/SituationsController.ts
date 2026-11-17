@@ -4,6 +4,7 @@ import { AppDataSource } from '../data-source.js';
 import { Situations } from '../entity/Situations.js';
 import { PaginationService } from '../services/PaginationService.js';
 import * as yup from 'yup';
+import { Not } from 'typeorm';
 
 const router = express.Router();
 
@@ -57,6 +58,15 @@ router.post("/situations", async (req: Request, res: Response) => {
     try {
         const data = await situationSchema.validate(req.body, { abortEarly: false });
         const repo = AppDataSource.getRepository(Situations);
+
+        const existingSituation = await repo.findOne({
+            where: { nameSituation: data.nameSituation }
+        });
+        if (existingSituation) {
+            res.status(409).json({ message: "Já existe uma situação com esse nome" });
+            return;
+        }
+
         const newSituation = repo.create({ nameSituation: data.nameSituation });
         await repo.save(newSituation);
         res.status(201).json({
@@ -82,11 +92,22 @@ router.put("/situations/:id", async (req: Request, res: Response) => {
         }
 
         const data = await situationSchema.validate(req.body, { abortEarly: false });
-
         const repo = AppDataSource.getRepository(Situations);
+
         const situation = await repo.findOneBy({ id: situationId });
         if (!situation) {
             res.status(404).json({ message: "Situação não encontrada" });
+            return;
+        }
+
+        const existingSituation = await repo.findOne({
+            where: {
+                nameSituation: data.nameSituation,
+                id: Not(situationId) // ignora a própria situação
+            }
+        });
+        if (existingSituation) {
+            res.status(409).json({ message: "Já existe uma situação com esse nome" });
             return;
         }
 
@@ -100,10 +121,6 @@ router.put("/situations/:id", async (req: Request, res: Response) => {
     } catch (error: any) {
         if (error instanceof yup.ValidationError) {
             res.status(400).json({ message: error.errors });
-            return;
-        }
-        if (error?.code === "ER_DUP_ENTRY" || error?.driverError?.code === "ER_DUP_ENTRY") {
-            res.status(409).json({ message: "Já existe uma situação com esse nome" });
             return;
         }
         console.error(error);
