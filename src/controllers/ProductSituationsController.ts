@@ -3,8 +3,26 @@ import type { Request, Response } from "express";
 import { AppDataSource } from "../data-source.js";
 import { ProductSituations } from "../entity/ProductSituations.js";
 import { PaginationService } from "../services/PaginationService.js";
+import * as yup from "yup";
+import { Not } from "typeorm";
 
 const router = express.Router();
+
+const productSituationSchema = yup.object().shape({
+    name: yup.string()
+        .trim()
+        .required("O campo 'name' é obrigatório")
+        .min(3, "O campo 'name' deve ter no mínimo 3 caracteres")
+});
+
+function parseId(value: string | string[] | undefined): number | null {
+    const raw = Array.isArray(value) ? value[0] : value;
+    const id = Number(raw);
+
+    return raw && Number.isInteger(id) && id > 0
+        ? id
+        : null;
+}
 
 router.get("/product-situations", async (req: Request, res: Response) => {
     try {
@@ -22,23 +40,32 @@ router.get("/product-situations", async (req: Request, res: Response) => {
         );
 
         res.status(200).json(result);
-        return;
 
     } catch (error) {
+        console.error(error);
+
         res.status(500).json({
             message: "Erro ao listar situações de produto"
         });
-        return;
     }
 });
 
 router.get("/product-situations/:id", async (req: Request, res: Response) => {
     try {
 
+        const productSituationId = parseId(req.params.id);
+
+        if (!productSituationId) {
+            res.status(400).json({
+                message: "ID de situação de produto inválido"
+            });
+            return;
+        }
+
         const repository = AppDataSource.getRepository(ProductSituations);
 
         const productSituation = await repository.findOneBy({
-            id: Number(req.params.id)
+            id: productSituationId
         });
 
         if (!productSituation) {
@@ -51,6 +78,8 @@ router.get("/product-situations/:id", async (req: Request, res: Response) => {
         res.status(200).json(productSituation);
 
     } catch (error) {
+        console.error(error);
+
         res.status(500).json({
             message: "Erro ao buscar situação de produto"
         });
@@ -60,9 +89,28 @@ router.get("/product-situations/:id", async (req: Request, res: Response) => {
 router.post("/product-situations", async (req: Request, res: Response) => {
     try {
 
+        const data = await productSituationSchema.validate(req.body, {
+            abortEarly: false
+        });
+
         const repository = AppDataSource.getRepository(ProductSituations);
 
-        const productSituation = repository.create(req.body);
+        const existingProductSituation = await repository.findOne({
+            where: {
+                name: data.name
+            }
+        });
+
+        if (existingProductSituation) {
+            res.status(409).json({
+                message: "Já existe uma situação de produto com esse nome"
+            });
+            return;
+        }
+
+        const productSituation = repository.create({
+            name: data.name
+        });
 
         await repository.save(productSituation);
 
@@ -72,6 +120,16 @@ router.post("/product-situations", async (req: Request, res: Response) => {
         });
 
     } catch (error) {
+
+        if (error instanceof yup.ValidationError) {
+            res.status(400).json({
+                message: error.errors
+            });
+            return;
+        }
+
+        console.error(error);
+
         res.status(500).json({
             message: "Erro ao criar situação de produto"
         });
@@ -81,10 +139,23 @@ router.post("/product-situations", async (req: Request, res: Response) => {
 router.put("/product-situations/:id", async (req: Request, res: Response) => {
     try {
 
+        const productSituationId = parseId(req.params.id);
+
+        if (!productSituationId) {
+            res.status(400).json({
+                message: "ID de situação de produto inválido"
+            });
+            return;
+        }
+
+        const data = await productSituationSchema.validate(req.body, {
+            abortEarly: false
+        });
+
         const repository = AppDataSource.getRepository(ProductSituations);
 
         const productSituation = await repository.findOneBy({
-            id: Number(req.params.id)
+            id: productSituationId
         });
 
         if (!productSituation) {
@@ -94,7 +165,23 @@ router.put("/product-situations/:id", async (req: Request, res: Response) => {
             return;
         }
 
-        repository.merge(productSituation, req.body);
+        const existingProductSituation = await repository.findOne({
+            where: {
+                name: data.name,
+                id: Not(productSituationId)
+            }
+        });
+
+        if (existingProductSituation) {
+            res.status(409).json({
+                message: "Já existe uma situação de produto com esse nome"
+            });
+            return;
+        }
+
+        repository.merge(productSituation, {
+            name: data.name
+        });
 
         const updatedProductSituation = await repository.save(productSituation);
 
@@ -104,6 +191,16 @@ router.put("/product-situations/:id", async (req: Request, res: Response) => {
         });
 
     } catch (error) {
+
+        if (error instanceof yup.ValidationError) {
+            res.status(400).json({
+                message: error.errors
+            });
+            return;
+        }
+
+        console.error(error);
+
         res.status(500).json({
             message: "Erro ao atualizar situação de produto"
         });
@@ -113,10 +210,19 @@ router.put("/product-situations/:id", async (req: Request, res: Response) => {
 router.delete("/product-situations/:id", async (req: Request, res: Response) => {
     try {
 
+        const productSituationId = parseId(req.params.id);
+
+        if (!productSituationId) {
+            res.status(400).json({
+                message: "ID de situação de produto inválido"
+            });
+            return;
+        }
+
         const repository = AppDataSource.getRepository(ProductSituations);
 
         const productSituation = await repository.findOneBy({
-            id: Number(req.params.id)
+            id: productSituationId
         });
 
         if (!productSituation) {
@@ -126,13 +232,15 @@ router.delete("/product-situations/:id", async (req: Request, res: Response) => 
             return;
         }
 
-        await repository.delete(Number(req.params.id));
+        await repository.delete(productSituationId);
 
         res.status(200).json({
             message: "Situação de produto removida com sucesso"
         });
 
     } catch (error) {
+        console.error(error);
+
         res.status(500).json({
             message: "Erro ao remover situação de produto"
         });

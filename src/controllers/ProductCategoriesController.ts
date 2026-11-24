@@ -3,8 +3,26 @@ import type { Request, Response } from "express";
 import { AppDataSource } from "../data-source.js";
 import { ProductCategories } from "../entity/ProductCategories.js";
 import { PaginationService } from "../services/PaginationService.js";
+import * as yup from "yup";
+import { Not } from "typeorm";
 
 const router = express.Router();
+
+const categorySchema = yup.object().shape({
+    name: yup.string()
+        .trim()
+        .required("O campo 'name' é obrigatório")
+        .min(3, "O campo 'name' deve ter no mínimo 3 caracteres")
+});
+
+function parseId(value: string | string[] | undefined): number | null {
+    const raw = Array.isArray(value) ? value[0] : value;
+    const id = Number(raw);
+
+    return raw && Number.isInteger(id) && id > 0
+        ? id
+        : null;
+}
 
 router.get("/product-categories", async (req: Request, res: Response) => {
     try {
@@ -21,23 +39,32 @@ router.get("/product-categories", async (req: Request, res: Response) => {
         );
 
         res.status(200).json(result);
-        return;
 
     } catch (error) {
+        console.error(error);
+
         res.status(500).json({
             message: "Erro ao listar categorias"
         });
-        return;
     }
 });
 
 router.get("/product-categories/:id", async (req: Request, res: Response) => {
     try {
 
+        const categoryId = parseId(req.params.id);
+
+        if (!categoryId) {
+            res.status(400).json({
+                message: "ID de categoria inválido"
+            });
+            return;
+        }
+
         const repository = AppDataSource.getRepository(ProductCategories);
 
         const category = await repository.findOneBy({
-            id: Number(req.params.id)
+            id: categoryId
         });
 
         if (!category) {
@@ -50,6 +77,8 @@ router.get("/product-categories/:id", async (req: Request, res: Response) => {
         res.status(200).json(category);
 
     } catch (error) {
+        console.error(error);
+
         res.status(500).json({
             message: "Erro ao buscar categoria"
         });
@@ -59,9 +88,28 @@ router.get("/product-categories/:id", async (req: Request, res: Response) => {
 router.post("/product-categories", async (req: Request, res: Response) => {
     try {
 
+        const data = await categorySchema.validate(req.body, {
+            abortEarly: false
+        });
+
         const repository = AppDataSource.getRepository(ProductCategories);
 
-        const category = repository.create(req.body);
+        const existingCategory = await repository.findOne({
+            where: {
+                name: data.name
+            }
+        });
+
+        if (existingCategory) {
+            res.status(409).json({
+                message: "Já existe uma categoria com esse nome"
+            });
+            return;
+        }
+
+        const category = repository.create({
+            name: data.name
+        });
 
         await repository.save(category);
 
@@ -71,6 +119,16 @@ router.post("/product-categories", async (req: Request, res: Response) => {
         });
 
     } catch (error) {
+
+        if (error instanceof yup.ValidationError) {
+            res.status(400).json({
+                message: error.errors
+            });
+            return;
+        }
+
+        console.error(error);
+
         res.status(500).json({
             message: "Erro ao criar categoria"
         });
@@ -80,10 +138,23 @@ router.post("/product-categories", async (req: Request, res: Response) => {
 router.put("/product-categories/:id", async (req: Request, res: Response) => {
     try {
 
+        const categoryId = parseId(req.params.id);
+
+        if (!categoryId) {
+            res.status(400).json({
+                message: "ID de categoria inválido"
+            });
+            return;
+        }
+
+        const data = await categorySchema.validate(req.body, {
+            abortEarly: false
+        });
+
         const repository = AppDataSource.getRepository(ProductCategories);
 
         const category = await repository.findOneBy({
-            id: Number(req.params.id)
+            id: categoryId
         });
 
         if (!category) {
@@ -93,7 +164,23 @@ router.put("/product-categories/:id", async (req: Request, res: Response) => {
             return;
         }
 
-        repository.merge(category, req.body);
+        const existingCategory = await repository.findOne({
+            where: {
+                name: data.name,
+                id: Not(categoryId)
+            }
+        });
+
+        if (existingCategory) {
+            res.status(409).json({
+                message: "Já existe uma categoria com esse nome"
+            });
+            return;
+        }
+
+        repository.merge(category, {
+            name: data.name
+        });
 
         const updatedCategory = await repository.save(category);
 
@@ -103,6 +190,16 @@ router.put("/product-categories/:id", async (req: Request, res: Response) => {
         });
 
     } catch (error) {
+
+        if (error instanceof yup.ValidationError) {
+            res.status(400).json({
+                message: error.errors
+            });
+            return;
+        }
+
+        console.error(error);
+
         res.status(500).json({
             message: "Erro ao atualizar categoria"
         });
@@ -112,10 +209,19 @@ router.put("/product-categories/:id", async (req: Request, res: Response) => {
 router.delete("/product-categories/:id", async (req: Request, res: Response) => {
     try {
 
+        const categoryId = parseId(req.params.id);
+
+        if (!categoryId) {
+            res.status(400).json({
+                message: "ID de categoria inválido"
+            });
+            return;
+        }
+
         const repository = AppDataSource.getRepository(ProductCategories);
 
         const category = await repository.findOneBy({
-            id: Number(req.params.id)
+            id: categoryId
         });
 
         if (!category) {
@@ -125,13 +231,15 @@ router.delete("/product-categories/:id", async (req: Request, res: Response) => 
             return;
         }
 
-        await repository.delete(Number(req.params.id));
+        await repository.delete(categoryId);
 
         res.status(200).json({
             message: "Categoria removida com sucesso"
         });
 
     } catch (error) {
+        console.error(error);
+
         res.status(500).json({
             message: "Erro ao remover categoria"
         });
