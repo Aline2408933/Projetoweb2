@@ -1,6 +1,7 @@
 import {DataSource} from "typeorm";
 import {Users} from "../entity/Users.js";
 import {Situations} from "../entity/Situations.js";
+import bcrypt from "bcryptjs";
 
 export default class CreateUsersSeed {
 public async run(dataSource: DataSource): Promise<void> {
@@ -26,13 +27,13 @@ const users= [
     {id:1,
      nameUsers: "Aline da Silva",
      email: "aline.silva@example.com",
-     password: "123456",
+     password: await bcrypt.hash("123456", 10),
      situation: situations,
     },
     {id:2,
      nameUsers: "Kaique Rodrigues",
      email: "kaique.rodrigues@example.com",
-     password: "123456",
+     password: await bcrypt.hash("123456", 10),
      situation: situations,
     }
 ];

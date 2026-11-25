@@ -5,6 +5,7 @@ import { Users } from '../entity/Users.js';
 import { PaginationService } from '../services/PaginationService.js';
 import * as yup from 'yup';
 import { Not } from 'typeorm';
+import bcrypt from 'bcryptjs';
 
 const router = express.Router();
 
@@ -74,16 +75,16 @@ router.post("/users", async (req: Request, res: Response) => {
         const existingUser = await userRepository.findOne({
             where: { email: data.email },
         });
+
         if (existingUser) {
-            res.status(409).json({ message: "E-mail já cadastrado" });
+            res.status(400).json({ message: "E-mail já cadastrado" });
             return;
         }
+        data.password = await bcrypt.hash(data.password, 10);
 
-        const newUser = userRepository.create({
-            nameUsers: data.nameUsers,
-            email: data.email,
-            situation: { id: data.situation },
-        });
+
+        const newUser = userRepository.create(data);
+          
         await userRepository.save(newUser);
 
         res.status(201).json({
@@ -99,6 +100,41 @@ router.post("/users", async (req: Request, res: Response) => {
         res.status(500).json({ message: "Erro ao criar usuário" });
     }
 });
+
+router.put("/users-password/:id", async (req: Request, res: Response) => {
+    try {
+        const {id} = req.params;
+        const data = req.body;
+
+        const schema = yup.object().shape({
+            password: yup.string().required("O campo 'password' é obrigatório").min(6, "O campo 'password' deve ter no mínimo 6 caracteres"),
+        });
+        await schema.validate(data, { abortEarly: false });
+
+        const userRepository = AppDataSource.getRepository(Users);
+        const user = await userRepository.findOneBy({ id: parseInt(id as string)});
+
+        if (!user) {
+            res.status(404).json({ 
+                message: "Usuário não encontrado" });
+            return;
+        }
+        data.password = await bcrypt.hash(data.password, 10);
+        userRepository.merge(user, data);
+        const updatedUser = await userRepository.save(user);
+
+        res.status(200).json({
+            message: "Senha do usuário atualizada com sucesso",
+            user: updatedUser,
+        });
+    } catch (error) {
+        if (error instanceof yup.ValidationError) {
+            res.status(400).json({ message: error.errors });
+            return;
+        }
+        res.status(500).json({ message: "Erro ao editar senha do usuário" });
+    }
+}); 
 
 router.put("/users/:id", async (req: Request, res: Response) => {
     try {
@@ -121,7 +157,7 @@ router.put("/users/:id", async (req: Request, res: Response) => {
             where: { email: data.email, id: Not(userId) },
         });
         if (existingUser) {
-            res.status(409).json({ message: "Já existe um usuário com esse e-mail" });
+            res.status(400).json({ message: "Já existe um usuário com esse e-mail" });
             return;
         }
 
