@@ -1,4 +1,13 @@
-import { Entity, PrimaryGeneratedColumn, Column } from "typeorm";
+import {
+    Entity,
+    PrimaryGeneratedColumn,
+    Column,
+    ManyToOne,
+    JoinColumn
+} from "typeorm";
+
+import { ProductCategories } from "./ProductCategories.js";
+import { ProductSituations } from "./ProductSituations.js";
 
 @Entity("Products")
 export class Products {
@@ -8,6 +17,30 @@ export class Products {
 
     @Column()
     name!: string;
+
+    @Column({ unique: true })
+    slug!: string;
+
+    @Column()
+    description!: string;
+
+    @Column("decimal", {
+        precision: 10,
+        scale: 2
+    })
+    price!: number;
+
+    @ManyToOne(() => ProductCategories)
+    @JoinColumn({
+        name: "productCategoryId"
+    })
+    productCategory!: ProductCategories;
+
+    @ManyToOne(() => ProductSituations)
+    @JoinColumn({
+        name: "productSituationId"
+    })
+    productSituation!: ProductSituations;
 
     @Column()
     productCategoryId!: number;
@@ -28,4 +61,3 @@ export class Products {
     })
     updatedAt!: Date;
 }
-``

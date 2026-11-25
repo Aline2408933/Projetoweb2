@@ -62,9 +62,15 @@ router.get("/users/:id", async (req: Request, res: Response) => {
 
 router.post("/users", async (req: Request, res: Response) => {
     try {
-        const data = await userSchema.validate(req.body, { abortEarly: false });
+        var data = req.body;
+        const schema = yup.object().shape({
+            nameUsers: yup.string().required("O campo 'nameUsers' é obrigatório").min(3, "O campo 'nameUsers' deve ter no mínimo 3 caracteres"),
+            email: yup.string().email("E-mail inválido").required("O campo 'email' é obrigatório"),
+            password: yup.string().required("O campo 'password' é obrigatório").min(6, "O campo 'password' deve ter no mínimo 6 caracteres"),
+            situation: yup.number().required("O campo 'situation' é obrigatório"),
+        });
+        await schema.validate(data, { abortEarly: false });
         const userRepository = AppDataSource.getRepository(Users);
-
         const existingUser = await userRepository.findOne({
             where: { email: data.email },
         });

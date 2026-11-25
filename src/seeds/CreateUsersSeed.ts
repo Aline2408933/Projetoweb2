@@ -26,11 +26,13 @@ const users= [
     {id:1,
      nameUsers: "Aline da Silva",
      email: "aline.silva@example.com",
+     password: "123456",
      situation: situations,
     },
     {id:2,
      nameUsers: "Kaique Rodrigues",
      email: "kaique.rodrigues@example.com",
+     password: "123456",
      situation: situations,
     }
 ];
