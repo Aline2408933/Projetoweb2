@@ -81,7 +81,8 @@ router.post("/users", verifyToken, async (req: Request, res: Response) => {
             res.status(400).json({ message: "E-mail já cadastrado" });
             return;
         }
-        data.password = await bcrypt.hash(data.password, 10);
+
+      //data.password = await bcrypt.hash(data.password, 10);
 
 
         const newUser = userRepository.create(data);
@@ -120,7 +121,7 @@ router.put("/users-password/:id", verifyToken, async (req: Request, res: Respons
                 message: "Usuário não encontrado" });
             return;
         }
-        data.password = await bcrypt.hash(data.password, 10);
+     // data.password = await bcrypt.hash(data.password, 10);
         userRepository.merge(user, data);
         const updatedUser = await userRepository.save(user);
 

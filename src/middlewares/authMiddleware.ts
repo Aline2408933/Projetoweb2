@@ -21,7 +21,7 @@ export function verifyToken( req: AuthRequest, res: Response, next: NextFunction
         return;
     }
 
-    const[bearer, token] = authHeader.split("")
+    const[bearer, token] = authHeader.split(" ")
     if(!token || bearer?.toLocaleLowerCase() !== "bearer"){
         res.status(401).json({ message:"Token inválido"});
         return;
