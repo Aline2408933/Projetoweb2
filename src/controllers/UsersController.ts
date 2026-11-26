@@ -6,9 +6,10 @@ import { PaginationService } from '../services/PaginationService.js';
 import * as yup from 'yup';
 import { Not } from 'typeorm';
 import bcrypt from 'bcryptjs';
+import {verifyToken} from '../middlewares/authMiddleware.js';
+import { verify } from 'crypto';
 
 const router = express.Router();
-
 const userSchema = yup.object().shape({
     nameUsers: yup.string()
         .trim()
@@ -28,7 +29,7 @@ function parseId(value: string | string[] | undefined): number | null {
     return raw && Number.isInteger(id) && id > 0 ? id : null;
 }
 
-router.get("/users", async (req: Request, res: Response) => {
+router.get("/users", verifyToken, async (req: Request, res: Response) => {
     try {
         const userRepository = AppDataSource.getRepository(Users);
         const page = Number(req.query.page) || 1;
@@ -41,8 +42,8 @@ router.get("/users", async (req: Request, res: Response) => {
     }
 });
 
-router.get("/users/:id", async (req: Request, res: Response) => {
-    try {
+router.get("/users/:id", verifyToken, async (req: Request, res: Response) => {
+    try { 
         const userId = parseId(req.params.id);
         if (!userId) {
             res.status(400).json({ message: "ID de usuário inválido" });
@@ -61,7 +62,7 @@ router.get("/users/:id", async (req: Request, res: Response) => {
     }
 });
 
-router.post("/users", async (req: Request, res: Response) => {
+router.post("/users", verifyToken, async (req: Request, res: Response) => {
     try {
         var data = req.body;
         const schema = yup.object().shape({
@@ -101,7 +102,7 @@ router.post("/users", async (req: Request, res: Response) => {
     }
 });
 
-router.put("/users-password/:id", async (req: Request, res: Response) => {
+router.put("/users-password/:id", verifyToken, async (req: Request, res: Response) => {
     try {
         const {id} = req.params;
         const data = req.body;
@@ -136,7 +137,7 @@ router.put("/users-password/:id", async (req: Request, res: Response) => {
     }
 }); 
 
-router.put("/users/:id", async (req: Request, res: Response) => {
+router.put("/users/:id", verifyToken, async (req: Request, res: Response) => {
     try {
         const userId = parseId(req.params.id);
         if (!userId) {
@@ -182,7 +183,7 @@ router.put("/users/:id", async (req: Request, res: Response) => {
     }
 });
 
-router.delete("/users/:id", async (req: Request, res: Response) => {
+router.delete("/users/:id",verifyToken, async (req: Request, res: Response) => {
     try {
         const userId = Number(req.params.id);
 
